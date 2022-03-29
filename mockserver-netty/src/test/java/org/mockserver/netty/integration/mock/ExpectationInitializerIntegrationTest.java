@@ -85,6 +85,44 @@ public class ExpectationInitializerIntegrationTest {
     }
 
     @Test
+    public void shouldMatchHeaderExpectationsFromJson() throws Exception {
+        // given
+        String initializationJsonPath = ConfigurationProperties.initializationJsonPath();
+        MockServer mockServer = null;
+
+        try {
+            // when
+            ConfigurationProperties.initializationJsonPath("org/mockserver/netty/integration/mock/initializer/initializerJsonWithHeader.json");
+            mockServer = new MockServer();
+
+            // then
+            assertThat(
+                httpClient.sendRequest(
+                    request()
+                        .withMethod("GET")
+                        .withHeader(HOST.toString(), "localhost:" + mockServer.getLocalPort())
+                        .withHeader(CONTENT_TYPE.toString(), MediaType.APPLICATION_JSON_UTF_8.toString())
+                        .withPath("/simpleFirst")
+                ).get(10, TimeUnit.SECONDS).getBodyAsString(),
+                is("some first response")
+            );
+            assertThat(
+                httpClient.sendRequest(
+                        request()
+                            .withMethod("GET")
+                            .withHeader(HOST.toString(), "localhost:" + mockServer.getLocalPort())
+                            .withPath("/simpleFirst")
+                    ).get(10, TimeUnit.SECONDS)
+                    .getStatusCode(),
+                is(404)
+            );
+        } finally {
+            ConfigurationProperties.initializationJsonPath(initializationJsonPath);
+            stopQuietly(mockServer);
+        }
+    }
+
+    @Test
     public void shouldLoadOpenAPIExpectationsFromJson() throws Exception {
         // given
         String initializationJsonPath = ConfigurationProperties.initializationJsonPath();
